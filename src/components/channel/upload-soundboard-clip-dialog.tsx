@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -18,7 +19,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore } from '@/firebase/provider';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, serverTimestamp } from 'firebase/firestore';
 import { usePage } from '@/context/page-context';
 

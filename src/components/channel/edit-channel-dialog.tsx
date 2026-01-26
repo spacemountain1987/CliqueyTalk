@@ -28,7 +28,8 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore } from '@/firebase/provider';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { doc } from 'firebase/firestore';
 import { TwitchIcon } from '../icons/twitch-icon';
 
