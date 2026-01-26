@@ -1,0 +1,114 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.isAdmin == true;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function channelData(channelId) {
+      return get(/databases/$(database)/documents/voice_channels/$(channelId)).data;
+    }
+
+    function isChannelParticipant(channelId) {
+      return isSignedIn()
+        && (
+          channelData(channelId).creatorId == uid()
+          || (channelData(channelId).participantIds is list && channelData(channelId).participantIds.hasAny([uid()]))
+        );
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+
+      // Clients can write their own profile, but cannot self-elevate admin.
+      allow create, update: if isSignedIn()
+        && uid() == userId
+        && request.resource.data.id == userId
+        && (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == isAdmin());
+
+      allow delete: if false;
+    }
+
+    match /voice_channels/{channelId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.creatorId == uid();
+      allow update, delete: if isSignedIn() && (resource.data.creatorId == uid() || isAdmin());
+    }
+
+    // Per-channel ephemeral state (e.g., soundboard triggers)
+    match /voice_channels/{channelId}/ephemeral_state/{stateId} {
+      allow read: if isChannelParticipant(channelId);
+      allow write: if isSignedIn() && (channelData(channelId).creatorId == uid() || isAdmin());
+    }
+
+    // WebRTC signaling state
+    match /voice_channels/{channelId}/peers/{peerId} {
+      allow read: if isChannelParticipant(channelId);
+      allow write: if isChannelParticipant(channelId) && uid() == peerId;
+
+      match /iceCandidates/{candidateId} {
+        allow read: if isChannelParticipant(channelId);
+        allow create: if isChannelParticipant(channelId) && uid() == peerId;
+        allow delete: if isChannelParticipant(channelId) && resource.data.targetId == uid();
+      }
+
+      match /offers/{offerId} {
+        allow read: if isChannelParticipant(channelId);
+        allow create: if isChannelParticipant(channelId) && uid() == peerId;
+        allow delete: if isChannelParticipant(channelId) && resource.data.targetId == uid();
+      }
+
+      match /answers/{answerId} {
+        allow read: if isChannelParticipant(channelId);
+        allow create: if isChannelParticipant(channelId) && uid() == peerId;
+        allow delete: if isChannelParticipant(channelId) && resource.data.targetId == uid();
+      }
+    }
+
+    match /banned_users/{userId} {
+      allow read: if isAdmin() || (isSignedIn() && uid() == userId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Legacy mapping collection; no longer used when uid == discordId.
+    match /firebase_uid_to_discord_id/{docId} {
+      allow read, write: if false;
+    }
+
+    match /music_queue/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.requesterId == uid();
+      allow update: if isAdmin();
+      allow delete: if isSignedIn() && (resource.data.requesterId == uid() || isAdmin());
+    }
+
+    match /soundboard_clips/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.creatorId == uid();
+      allow delete: if isSignedIn() && (resource.data.creatorId == uid() || isAdmin());
+      allow update: if false;
+    }
+
+    match /app_settings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /channel_webhooks/{channelId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Default deny.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

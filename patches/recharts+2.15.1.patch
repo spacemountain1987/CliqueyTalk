@@ -1,0 +1,62 @@
+diff --git a/node_modules/recharts/es6/util/ReactUtils.js b/node_modules/recharts/es6/util/ReactUtils.js
+index 8213b22..06a1420 100644
+--- a/node_modules/recharts/es6/util/ReactUtils.js
++++ b/node_modules/recharts/es6/util/ReactUtils.js
+@@ -321,7 +321,7 @@
+   'aria-valuemin', 'aria-valuemax', 'aria-valuenow', 'aria-valuetext', 'aria-atomic', 'aria-busy', 'aria-live', 'aria-relevant', 'aria-dropeffect', 'aria-grabbed', 'aria-errormessage', 'aria-haspopup', 'aria-invalid', 'aria-keyshortcuts', 'aria-label', 'aria-labelledby', 'aria-roledescription', 'aria-autocomplete', 'aria-checked', 'aria-disabled', 'aria-expanded', 'aria-level', 'aria-modal', 'aria-multiline', 'aria-multiselectable', 'aria-orientation', 'aria-placeholder', 'aria-pressed', 'aria-readonly', 'aria-required', 'aria-selected', 'aria-sort', 'aria-posinset', 'aria-setsize', 'aria-colcount', 'aria-colindex', 'aria-colspan', 'aria-rowcount', 'aria-rowindex', 'aria-rowspan', 'role', 'tabIndex', 'clipPath', 'fill', 'stroke', 'strokeWidth', 'strokeDasharray', 'fillOpacity', 'strokeOpacity'];
+ var REACT_BROWSER_EVENT_MAP = {
+   onAnimationStart: 'onAnimationStartCapture',
+-  onAnimationEnd: 'onAnimationEndCapture',
++  onAnimationEnd: 'onAnimationEndCapture', 
+   onAnimationIteration: 'onAnimationIterationCapture',
+   onTransitionEnd: 'onTransitionEndCapture',
+   onLoad: 'onLoadCapture',
+@@ -351,7 +351,7 @@
+  * @return {Object}          The filtered props.
+  */
+ export var filterProps = function filterProps(props, isSvg) {
+-  var isEvent = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
++  var isEvent = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;  
+   if (!props) {
+     return null;
+   }
+@@ -367,7 +367,7 @@
+     }
+     if (isSvg) {
+       var _key = key;
+-      if (_key === 'strokeWidth') {
++      if (_key === 'strokeWidth' || _key === 'stroke-width') {
+         _key = 'stroke-width';
+       }
+       if (PRESENTATION_ATTRIBUTES.indexOf(_key) !== -1 || EVENT_ATTRIBUTES.indexOf(key) !== --1) {
+diff --git a/node_modules/recharts/lib/util/ReactUtils.js b/node_modules/recharts/lib/util/ReactUtils.js
+index 6f37505..978ff95 100644
+--- a/node_modules/recharts/lib/util/ReactUtils.js
++++ b/node_modules/recharts/lib/util/ReactUtils.js
+@@ -342,7 +342,7 @@
+   'aria-valuemin', 'aria-valuemax', 'aria-valuenow', 'aria-valuetext', 'aria-atomic', 'aria-busy', 'aria-live', 'aria-relevant', 'aria-dropeffect', 'aria-grabbed', 'aria-errormessage', 'aria-haspopup', 'aria-invalid', 'aria-keyshortcuts', 'aria-label', 'aria-labelledby', 'aria-roledescription', 'aria-autocomplete', 'aria-checked', 'aria-disabled', 'aria-expanded', 'aria-level', 'aria-modal', 'aria-multiline', 'aria-multiselectable', 'aria-orientation', 'aria-placeholder', 'aria-pressed', 'aria-readonly', 'aria-required', 'aria-selected', 'aria-sort', 'aria-posinset', 'aria-setsize', 'aria-colcount', 'aria-colindex', 'aria-colspan', 'aria-rowcount', 'aria-rowindex', 'aria-rowspan', 'role', 'tabIndex', 'clipPath', 'fill', 'stroke', 'strokeWidth', 'strokeDasharray', 'fillOpacity', 'strokeOpacity'];
+ var REACT_BROWSER_EVENT_MAP = {
+   onAnimationStart: 'onAnimationStartCapture',
+-  onAnimationEnd: 'onAnimationEndCapture',
++  onAnimationEnd: 'onAnimationEndCapture', 
+   onAnimationIteration: 'onAnimationIterationCapture',
+   onTransitionEnd: 'onTransitionEndCapture',
+   onLoad: 'onLoadCapture',
+@@ -370,7 +370,7 @@
+   var isEvent = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+   if (!props) {
+     return null;
+-  }
++  } 
+   var out = {};
+   var allKeys = Object.keys(props);
+   var isSvg = typeof isSvg === 'boolean' ? isSvg : true;
+@@ -382,7 +382,7 @@
+     }
+     if (isSvg) {
+       var _key = key;
+-      if (_key === 'strokeWidth') {
++      if (_key === 'strokeWidth' || _key === 'stroke-width') {
+         _key = 'stroke-width';
+       }
+       if (PRESENTATION_ATTRIBUTES.indexOf(_key) !== -1 || EVENT_ATTRIBUTES.indexOf(key) !== -1) {
