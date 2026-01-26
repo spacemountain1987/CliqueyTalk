@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -40,11 +39,11 @@ import { z } from 'zod';
 
 const uploadQueueSchema = z.object({
   name: z.string().min(2, 'Song name must be at least 2 characters long.').max(50, 'Song name must be 50 characters or less.'),
-  audioFile: z.instanceof(FileList)
-    .refine(files => files?.length === 1, 'Audio file is required.')
-    .refine(files => files?.[0]?.size <= 10 * 1024 * 1024, `Max file size is 10MB.`)
+  audioFile: z.any()
+    .refine((files): files is FileList => files?.length === 1, 'Audio file is required.')
+    .refine((files) => files?.[0]?.size <= 10 * 1024 * 1024, `Max file size is 10MB.`)
     .refine(
-      files => ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a'].includes(files?.[0]?.type),
+      (files) => ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a'].includes(files?.[0]?.type),
       'Only .mp3, .wav, .ogg, or .m4a files are accepted.'
     ),
 });

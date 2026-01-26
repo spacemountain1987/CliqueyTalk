@@ -24,11 +24,11 @@ import { usePage } from '@/context/page-context';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Clip name must be at least 2 characters long.').max(30, 'Clip name must be 30 characters or less.'),
-  audioFile: z.instanceof(FileList)
-    .refine(files => files?.length === 1, 'Audio file is required.')
-    .refine(files => files?.[0]?.size <= 2 * 1024 * 1024, `Max file size is 2MB.`)
+  audioFile: z.any()
+    .refine((files): files is FileList => files?.length === 1, 'Audio file is required.')
+    .refine((files) => files?.[0]?.size <= 2 * 1024 * 1024, `Max file size is 2MB.`)
     .refine(
-      files => ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a'].includes(files?.[0]?.type),
+      (files) => ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a'].includes(files?.[0]?.type),
       'Only .mp3, .wav, .ogg, or .m4a files are accepted.'
     ),
 });
