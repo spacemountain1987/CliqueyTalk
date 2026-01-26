@@ -2,15 +2,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/firebase/admin';
 import { requireFirebaseIdToken } from '@/lib/firebase-id-token';
+import { getLatestSecretCached } from '@/lib/secrets';
 
 export const dynamic = 'force-dynamic';
 
 // Helper to post a message to a Discord channel
 async function postToDiscord(channelId: string, message: object) {
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-  if (!botToken) {
-    throw new Error('DISCORD_BOT_TOKEN is not configured.');
-  }
+  const botToken = await getLatestSecretCached('DISCORD_BOT_TOKEN');
 
   const url = `https://discord.com/api/v10/channels/${channelId}/messages`;
   const headers = {

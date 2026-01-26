@@ -70,3 +70,20 @@ export async function getLatestSecret(secretId: string): Promise<string> {
         );
     }
 }
+
+type CachedSecret = { value: string; expiresAt: number };
+const secretCache = new Map<string, CachedSecret>();
+
+/**
+ * Cached wrapper around getLatestSecret to avoid repeated Secret Manager calls.
+ * Cache is process-local (per server instance).
+ */
+export async function getLatestSecretCached(secretId: string, ttlMs = 5 * 60 * 1000): Promise<string> {
+    const now = Date.now();
+    const cached = secretCache.get(secretId);
+    if (cached && cached.expiresAt > now) return cached.value;
+
+    const value = await getLatestSecret(secretId);
+    secretCache.set(secretId, { value, expiresAt: now + ttlMs });
+    return value;
+}

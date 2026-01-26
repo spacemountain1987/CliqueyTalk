@@ -4,6 +4,7 @@
 import tmi from 'tmi.js';
 import { db } from '@/firebase/admin';
 import { processSongRequest } from '@/lib/audio-bot-actions';
+import { getLatestSecretCached } from '@/lib/secrets';
 
 let client: tmi.Client | null = null;
 let isConnecting = false;
@@ -26,10 +27,10 @@ async function getValidAccessToken(): Promise<string> {
     // Refresh if token expires in the next minute
     if (Date.now() + 60000 > credentials.expiresAt) {
         console.log('Refreshing Twitch token...');
-        const clientId = process.env.TWITCH_CLIENT_ID;
-        const clientSecret = process.env.TWITCH_CLIENT_SECRET;
-
-        if (!clientId || !clientSecret) throw new Error('Twitch client credentials are not configured.');
+        const [clientId, clientSecret] = await Promise.all([
+            getLatestSecretCached('TWITCH_CLIENT_ID'),
+            getLatestSecretCached('TWITCH_CLIENT_SECRET'),
+        ]);
 
         const params = new URLSearchParams({
             client_id: clientId.trim(),

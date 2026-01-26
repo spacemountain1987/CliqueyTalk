@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireFirebaseIdToken } from '@/lib/firebase-id-token';
+import { getLatestSecretCached } from '@/lib/secrets';
 
 const BOT_USER_AGENT = 'DiscordBot (CliqueyTalk, 1.0)';
 
@@ -15,8 +16,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: e?.message || 'Unauthorized' }, { status: 401 });
   }
 
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-  if (!botToken) {
+  let botToken: string;
+  try {
+    botToken = await getLatestSecretCached('DISCORD_BOT_TOKEN');
+  } catch {
     return NextResponse.json({ error: 'Server is not configured with a bot token.' }, { status: 500 });
   }
 
@@ -64,8 +67,10 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: e?.message || 'Unauthorized' }, { status: 401 });
   }
 
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-  if (!botToken) {
+  let botToken: string;
+  try {
+    botToken = await getLatestSecretCached('DISCORD_BOT_TOKEN');
+  } catch {
     return NextResponse.json({ error: 'Server is not configured with a bot token.' }, { status: 500 });
   }
 

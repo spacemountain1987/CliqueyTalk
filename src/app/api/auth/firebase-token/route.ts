@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth as adminAuth, db } from '@/firebase/admin';
 import { requireDiscordSession } from '@/lib/discord-session';
 import { rateLimit } from '@/lib/rate-limit';
+import { getLatestSecretCached } from '@/lib/secrets';
 
 const DISCORD_API_BASE = 'https://discord.com/api/v10';
 
@@ -43,9 +44,14 @@ export async function GET(req: NextRequest) {
   try {
     const { user: discordUser } = await requireDiscordSession(req);
 
-    const guildId = process.env.DISCORD_GUILD_ID;
-    const botToken = process.env.DISCORD_BOT_TOKEN;
-    if (!guildId || !botToken) {
+    let guildId: string;
+    let botToken: string;
+    try {
+      [guildId, botToken] = await Promise.all([
+        getLatestSecretCached('DISCORD_GUILD_ID'),
+        getLatestSecretCached('DISCORD_BOT_TOKEN'),
+      ]);
+    } catch {
       return NextResponse.json({ error: 'Server is not configured for Discord verification.' }, { status: 500 });
     }
 

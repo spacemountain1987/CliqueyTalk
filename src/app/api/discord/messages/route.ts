@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 import { requireDiscordSession } from '@/lib/discord-session';
+import { getLatestSecretCached } from '@/lib/secrets';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,13 +13,15 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const channelId = searchParams.get('channelId');
-  const botToken = process.env.DISCORD_BOT_TOKEN;
+  let botToken: string;
 
   if (!channelId) {
     return NextResponse.json({ error: 'Channel ID is required.' }, { status: 400 });
   }
 
-  if (!botToken) {
+  try {
+    botToken = await getLatestSecretCached('DISCORD_BOT_TOKEN');
+  } catch {
     console.error("API Error: DISCORD_BOT_TOKEN is not configured.");
     return NextResponse.json(
       { error: 'Server is not configured for chat.' },
