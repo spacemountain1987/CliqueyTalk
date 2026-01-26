@@ -257,7 +257,7 @@ function CurrentUserCard({ user, isVideoChannel, channel, stream, mediaError, is
     if (stream) {
       stream.getAudioTracks().forEach(track => (track.enabled = !isMuted));
       if (isVideoChannel) {
-        stream.getVideoTracks().forEach(track => (track.enabled = isCameraOn));
+                stream.getVideoTracks().forEach(track => (track.enabled = Boolean(isCameraOn)));
       }
     }
   }, [isMuted, isCameraOn, stream, isVideoChannel]);
@@ -620,7 +620,7 @@ function AudioBotCard({ channel, isVideoChannel, isController, audioContext, out
         if (!firestore || !channel?.id) return null;
         return doc(firestore, `voice_channels/${channel.id}/ephemeral_state/soundboard`);
     }, [firestore, channel?.id]);
-    const { data: soundboardState } = useDoc<any>(soundboardState);
+    const { data: soundboardState } = useDoc<any>(ephemeralStateRef);
 
     const audioPlayerRef = useRef<HTMLAudioElement>(null);
     const soundboardPlayerRef = useRef<HTMLAudioElement>(null);
@@ -758,8 +758,12 @@ function AudioBotCard({ channel, isVideoChannel, isController, audioContext, out
             toast({ title: 'Song Uploaded', description: `"${data.name}" has been added to the queue.` });
             reset();
 
-            const botStateSnap = await getDoc(audioBotStateRef);
-            if (!botStateSnap.exists() || botStateSnap.data()?.status === 'stopped') {
+            if (audioBotStateRef) {
+                const botStateSnap = await getDoc(audioBotStateRef);
+                if (!botStateSnap.exists() || botStateSnap.data()?.status === 'stopped') {
+                    playNextInQueue();
+                }
+            } else {
                 playNextInQueue();
             }
 

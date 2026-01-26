@@ -31,11 +31,15 @@ export async function GET(request: NextRequest) {
     const search = await youtube.search(query, { sort_by: 'relevance', type: 'video' });
 
     if (search.videos.length > 0) {
-      const results = search.videos.slice(0, 10).map(item => ({
-        videoId: item.id,
-        title: item.title.text,
-        channel: item.author.name,
-      }));
+      const results = search.videos
+        .map((item: any) => {
+          const videoId = item?.id ?? item?.video_id ?? item?.videoId;
+          const title = item?.title?.text ?? item?.title ?? '';
+          const channel = item?.author?.name ?? item?.author?.text ?? '';
+          return { videoId, title, channel };
+        })
+        .filter((r: any) => typeof r.videoId === 'string' && r.videoId.length > 0)
+        .slice(0, 10);
       return NextResponse.json(results);
     } else {
       return NextResponse.json({ error: 'No results found' }, { status: 404 });

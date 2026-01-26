@@ -9,9 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@genkit-ai/google-genai": "^1.28.0",
     "@google-cloud/firestore": "^8.2.0",
     "@google-cloud/secret-manager": "^6.1.1",
-    "@genkit-ai/google-genai": "^1.28.0",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -45,6 +45,7 @@
     "lucide-react": "^0.469.0",
     "next": "^14.2.25",
     "react": "^18.3.1",
+    "react-day-picker": "^9.13.0",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.2",
     "recharts": "^2.15.1",
@@ -58,6 +59,7 @@
     "@types/node": "^20.17.12",
     "@types/react": "^18.3.14",
     "@types/react-dom": "^18.3.2",
+    "@types/tmi.js": "^1.8.6",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.25",

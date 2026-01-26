@@ -27,7 +27,7 @@ async function getAuthorizedTwitchChannelName(req: NextRequest): Promise<string>
   const participantIds: string[] = Array.isArray(data?.participantIds) ? data.participantIds : [];
   const creatorId: string | undefined = typeof data?.creatorId === 'string' ? data.creatorId : undefined;
 
-  const isParticipant = creatorId === session.discordUser.id || participantIds.includes(session.discordUser.id);
+  const isParticipant = creatorId === session.user.id || participantIds.includes(session.user.id);
   if (!isParticipant) {
     throw new Error('Forbidden.');
   }

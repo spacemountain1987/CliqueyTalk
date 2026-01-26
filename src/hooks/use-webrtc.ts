@@ -400,12 +400,12 @@ export function useWebRTC(
         const existingPeers = Object.keys(peerConnections.current);
         
         const newPeers = remotePeers.filter((id: string) => !existingPeers.includes(id));
-        newPeers.forEach(peerId => createPeerConnection(peerId));
+        newPeers.forEach((peerId: string) => createPeerConnection(peerId));
 
         const removedPeers = existingPeers.filter((id: string) => !remotePeers.includes(id));
-        removedPeers.forEach(peerId => {
+        removedPeers.forEach((peerId: string) => {
             if (peerUnsubscribers[peerId]) {
-                peerUnsubscribers[peerId].forEach(unsub => unsub());
+                peerUnsubscribers[peerId].forEach((unsub: () => void) => unsub());
                 delete peerUnsubscribers[peerId];
             }
             cleanupPeerConnection(peerId);

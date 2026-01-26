@@ -18,13 +18,16 @@ import { FirestoreContextualError } from '@/firebase/errors';
  * Initiates a setDoc operation for a document reference.
  * Does NOT await the write operation internally.
  */
-export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options: SetOptions) {
-  setDoc(docRef, data, options).catch((error: FirestoreError) => {
+export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options?: SetOptions) {
+  const writePromise = options ? setDoc(docRef, data, options) : setDoc(docRef, data);
+
+  writePromise.catch((error: FirestoreError) => {
+    const isMerge = Boolean(options && 'merge' in options && options.merge);
     errorEmitter.emit(
       'permission-error',
       new FirestoreContextualError({
         path: docRef.path,
-        operation: options.merge ? 'update' : 'create',
+        operation: isMerge ? 'update' : 'create',
         requestResourceData: data,
       }, error)
     )
