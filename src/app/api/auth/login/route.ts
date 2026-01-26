@@ -5,12 +5,9 @@ import { randomUUID } from 'crypto';
 
 export async function GET(req: NextRequest) {
   try {
-    const [clientId, appUrl] = await Promise.all([
-        getLatestSecret('DISCORD_CLIENT_ID'),
-        getLatestSecret('NEXT_PUBLIC_APP_URL')
-    ]);
-
-    const redirectUri = `${appUrl.trim()}/api/auth/callback`;
+    const clientId = await getLatestSecret('DISCORD_CLIENT_ID');
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin).trim();
+    const redirectUri = `${appUrl}/api/auth/callback`;
 
     const scopes = ['identify', 'email', 'guilds'].join(' ');
 
@@ -35,9 +32,12 @@ export async function GET(req: NextRequest) {
     return res;
   } catch (error) {
     console.error('An unexpected error occurred during Discord authentication setup:', error);
-    if (error instanceof Error && error.message.includes('Secret Manager')) {
-        return new Response('Internal Server Error: Could not load critical application configuration from Secret Manager. Please verify that DISCORD_CLIENT_ID and NEXT_PUBLIC_APP_URL secrets exist and are accessible.', { status: 500 });
+    if (error instanceof Error) {
+      return new Response(
+        `Discord OAuth is not configured. ${error.message}`,
+        { status: 503 }
+      );
     }
-    return new Response('An unexpected error occurred.', { status: 500 });
+    return new Response('Discord OAuth is not configured.', { status: 503 });
   }
 }

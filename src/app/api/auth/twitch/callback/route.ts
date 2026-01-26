@@ -16,13 +16,13 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const [clientId, clientSecret, appUrl] = await Promise.all([
-        getLatestSecret('TWITCH_CLIENT_ID'),
-        getLatestSecret('TWITCH_CLIENT_SECRET'),
-        getLatestSecret('NEXT_PUBLIC_APP_URL')
+    const [clientId, clientSecret] = await Promise.all([
+      getLatestSecret('TWITCH_CLIENT_ID'),
+      getLatestSecret('TWITCH_CLIENT_SECRET'),
     ]);
 
-    const redirectUri = `${appUrl.trim()}/api/auth/twitch/callback`;
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin).trim();
+    const redirectUri = `${appUrl}/api/auth/twitch/callback`;
 
     const params = new URLSearchParams();
     params.append('client_id', clientId.trim());
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       return new Response(JSON.stringify(tokenData), { status: 500 });
     }
 
-    const dashboardUrl = new URL('/dashboard', appUrl.trim());
+    const dashboardUrl = new URL('/dashboard', appUrl);
     const res = NextResponse.redirect(dashboardUrl);
 
     res.cookies.set('twitch_oauth_state', '', {
@@ -65,9 +65,12 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     console.error('An unexpected error occurred during Twitch authentication:', error);
-    if (error instanceof Error && error.message.includes('Secret Manager')) {
-        return new Response('Internal Server Error: Could not load critical application configuration from Secret Manager. Please verify that TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET secrets exist and are accessible.', { status: 500 });
+    if (error instanceof Error) {
+      return new Response(
+        `Twitch OAuth is not configured. ${error.message}`,
+        { status: 503 }
+      );
     }
-    return new Response('An unexpected error occurred.', { status: 500 });
+    return new Response('Twitch OAuth is not configured.', { status: 503 });
   }
 }
