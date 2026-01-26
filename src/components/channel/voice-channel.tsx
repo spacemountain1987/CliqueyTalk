@@ -37,9 +37,15 @@ import { z } from 'zod';
 
 const uploadQueueSchema = z.object({
   name: z.string().min(2, 'Song name must be at least 2 characters long.').max(50, 'Song name must be 50 characters or less.'),
+<<<<<<< HEAD
   audioFile: z.instanceof(FileList)
     .refine(files => files?.length === 1, 'Audio file is required.')
     .refine(files => files?.[0]?.size <= 10 * 1024 * 1024, `Max file size is 10MB.`)
+=======
+  audioFile: z.any()
+    .refine((files) => files?.[0], 'Audio file is required.')
+    .refine((files) => files?.[0]?.size <= 10 * 1024 * 1024, `Max file size is 10MB.`)
+>>>>>>> b8e87602 (Fix #1 — the crash)
     .refine(
       files => ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a'].includes(files?.[0]?.type),
       'Only .mp3, .wav, .ogg, or .m4a files are accepted.'
@@ -1178,8 +1184,7 @@ function OtherUserCard({ userId, isVideoChannel, stream, mediaError, isSpeaking,
 
 export function VoiceChannel({ channel, onJoin }: { channel: any, onJoin: (password?: string) => Promise<boolean> }) {
   const { user: currentUser, isUserLoading } = useUser();
-  const { discordId, setDiscordId } = usePage();
-  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const { discordId, setDiscordId, audioContext, setAudioContext } = usePage();
   const [showAudioBot, setShowAudioBot] = useState(false);
   const [availableDevices, setAvailableDevices] = useState<{inputs: MediaDeviceInfo[], outputs: MediaDeviceInfo[]}>({inputs: [], outputs: []});
 
@@ -1206,8 +1211,6 @@ export function VoiceChannel({ channel, onJoin }: { channel: any, onJoin: (passw
   useEffect(() => {
     const getDevices = async () => {
       try {
-        // We only enumerate devices. The useWebRTC hook is responsible for requesting media permissions.
-        // Once permission is granted by the user for that hook, this will return the full list of devices.
         if (!navigator.mediaDevices?.enumerateDevices) {
           console.warn("enumerateDevices() not supported.");
           return;
@@ -1222,17 +1225,18 @@ export function VoiceChannel({ channel, onJoin }: { channel: any, onJoin: (passw
     };
     
     if (isUserInChannel) {
-        getDevices();
-        // Also listen for changes
-        navigator.mediaDevices.addEventListener('devicechange', getDevices);
+        if (audioContext) { // Only enumerate if we have permission (indicated by audioContext)
+            getDevices();
+            navigator.mediaDevices.addEventListener('devicechange', getDevices);
+        }
     }
     
     return () => {
-        if (isUserInChannel) {
+        if (isUserInChannel && audioContext) {
             navigator.mediaDevices.removeEventListener('devicechange', getDevices);
         }
     }
-  }, [isUserInChannel]);
+  }, [isUserInChannel, audioContext]);
   
   const { 
       localStream, 
@@ -1292,13 +1296,18 @@ export function VoiceChannel({ channel, onJoin }: { channel: any, onJoin: (passw
     ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'
     : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
   
-  const handleJoinClick = () => {
-    // Lazy-initialize AudioContext on user interaction
+  const handleJoinClick = async () => {
     if (!audioContext) {
         try {
+            // Request dummy audio track to get permissions without forcing a specific device,
+            // which also initializes the AudioContext.
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            stream.getTracks().forEach(track => track.stop()); // We don't need this stream, just the permission.
             setAudioContext(new (window.AudioContext || (window as any).webkitAudioContext)());
         } catch (e) {
-            console.error("AudioContext not supported by this browser.");
+            console.error("Audio permissions denied or AudioContext not supported.");
+            // Optionally, show a toast or alert to the user.
+            return;
         }
     }
     onJoin();
