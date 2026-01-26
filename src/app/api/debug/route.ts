@@ -4,12 +4,19 @@ import { getLatestSecret } from '@/lib/secrets';
 
 export async function GET(req: NextRequest) {
   try {
-    console.log('Attempting to fetch secret: NEXT_PUBLIC_APP_URL');
-    const appUrl = await getLatestSecret('NEXT_PUBLIC_APP_URL');
+    // This route is for testing secret manager access.
+    // We'll test fetching the Discord Client ID, which is a real secret.
+    console.log('Attempting to fetch secret: DISCORD_CLIENT_ID');
+    const secretValue = await getLatestSecret('DISCORD_CLIENT_ID');
     console.log('Successfully fetched secret.');
+    
+    // We don't want to expose the actual secret value, just confirm it was fetched.
+    const isSecretPresent = !!secretValue;
+
     return NextResponse.json({
-      message: 'Successfully fetched secret.',
-      value: appUrl,
+      message: 'Successfully attempted to fetch secret.',
+      secretName: 'DISCORD_CLIENT_ID',
+      isSecretPresent: isSecretPresent,
     });
   } catch (error: any) {
     console.error('Failed to fetch secret in debug route:', error);
