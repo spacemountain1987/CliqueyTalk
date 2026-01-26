@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow reads for any authenticated user. This is required for clients to play the audio.
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+    }
+
+    // Disallow writes from the client. All uploads will now go through the secure backend API.
+    // The Admin SDK used by the backend bypasses these rules automatically.
+    match /soundboard/{allPaths=**} {
+      allow write: if false;
+    }
+    match /queued-songs/{allPaths=**} {
+      allow write: if false;
+    }
+  }
+}

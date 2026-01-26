@@ -1,0 +1,27 @@
+# Settings to manage and configure a Firebase App Hosting backend.
+# https://firebase.google.com/docs/app-hosting/configure
+
+customBuild:
+  dockerfile: Dockerfile
+
+runConfig:
+  # Increase this value if you'd like to automatically spin up
+  # more instances in response to increased traffic.
+  maxInstances: 1
+env:
+  - variable: NEXT_PUBLIC_APP_URL
+    value: https://studio--studio-2042788331-2555f.us-central1.hosted.app
+  - variable: DISCORD_CLIENT_ID
+    secret: DISCORD_CLIENT_ID
+  - variable: DISCORD_CLIENT_SECRET
+    secret: DISCORD_CLIENT_SECRET
+  - variable: DISCORD_BOT_TOKEN
+    secret: DISCORD_BOT_TOKEN
+  - variable: YOUTUBE_COOKIE
+    secret: YOUTUBE_COOKIE
+  - variable: DISCORD_GUILD_ID
+    secret: DISCORD_GUILD_ID
+  - variable: TWITCH_CLIENT_ID
+    secret: TWITCH_CLIENT_ID
+  - variable: TWITCH_CLIENT_SECRET
+    secret: TWITCH_CLIENT_SECRET

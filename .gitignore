@@ -1,0 +1,44 @@
+Open [https://github.com/login/device](https://github.com/login/device) in a new tab and paste your one-time code: F6FA-8E37
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js build output
+/.next/
+/out/
+
+# Production
+/build
+
+# Misc
+.DS_Store
+*.pem
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Firebase
+.firebase/
+firebase-debug.log
+
+# Google Cloud Service Account Keys
+# IMPORTANT: Never commit service account keys.
+*.json
+
+# VSCode settings
+.vscode/
