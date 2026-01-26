@@ -167,6 +167,7 @@ function EmojiPicker({ onEmojiSelect }: { onEmojiSelect: (emojiString: string) =
                                         <TooltipTrigger asChild>
                                             <button
                                                 onClick={() => handleEmojiClick(emoji)}
+                                                aria-label={`Insert emoji :${emoji.name}:`}
                                                 className="aspect-square rounded-md p-1 hover:bg-accent transition-colors"
                                             >
                                                 <Image
@@ -234,10 +235,12 @@ function DiscordChat() {
         setIsSending(true);
 
         try {
+            const idToken = await user.getIdToken();
             const response = await fetch('/api/discord/webhook', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`,
                 },
                 body: JSON.stringify({ 
                     webhookUrl: webhookUrl,
@@ -362,9 +365,14 @@ function DiscordChat() {
                 if (docSnap.exists()) {
                     setWebhookUrl(docSnap.data().webhookUrl);
                 } else {
+                    const idToken = user ? await user.getIdToken() : null;
+                    if (!idToken) throw new Error('You must be signed in.');
                     const res = await fetch('/api/discord/webhook-manager', {
                         method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${idToken}`,
+                        },
                         body: JSON.stringify({ channelId }),
                     });
     
@@ -395,7 +403,7 @@ function DiscordChat() {
             manageWebhook(selectedChannel);
         }
 
-    }, [selectedChannel, firestore, toast]);
+    }, [selectedChannel, firestore, toast, user]);
 
     useEffect(() => {
         const fetchChannels = async () => {

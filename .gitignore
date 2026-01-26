@@ -1,4 +1,3 @@
-Open [https://github.com/login/device](https://github.com/login/device) in a new tab and paste your one-time code: F6FA-8E37
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # Dependencies
@@ -38,7 +37,14 @@ firebase-debug.log
 
 # Google Cloud Service Account Keys
 # IMPORTANT: Never commit service account keys.
-*.json
+**/service-account*.json
+**/*serviceaccount*.json
+**/firebase-adminsdk-*.json
+**/*credentials*.json
+
+# Do NOT ignore all JSON files. This repo needs JSON config checked in
+# (e.g. package.json / tsconfig.json). If you need local-only JSON,
+# add it explicitly here.
 
 # VSCode settings
 .vscode/

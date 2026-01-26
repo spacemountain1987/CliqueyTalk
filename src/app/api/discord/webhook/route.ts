@@ -1,7 +1,17 @@
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireFirebaseIdToken } from '@/lib/firebase-id-token';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  try {
+    const decoded = await requireFirebaseIdToken(request);
+    if (!decoded.isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { content, username, avatar_url, webhookUrl } = await request.json();
 

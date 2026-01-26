@@ -12,8 +12,8 @@ import { usePage } from "@/context/page-context";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, setDocumentNonBlocking, useDoc } from "@/firebase";
 import { collection, query, doc, Timestamp, writeBatch, getDoc } from "firebase/firestore";
 import type { WithId } from "@/firebase";
-import { useSearchParams, useRouter } from "next/navigation";
-import { signInAnonymously, updateProfile } from "firebase/auth";
+import { useRouter } from "next/navigation";
+import { signInWithCustomToken, updateProfile } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { TwitchIcon } from '@/components/icons/twitch-icon';
 
@@ -36,12 +36,14 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 5, de
 }
 
 
-async function getDiscordUser(accessToken: string) {
-    const response = await fetchWithRetry('https://discord.com/api/users/@me', {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+async function getDiscordUser() {
+    const response = await fetchWithRetry('/api/discord/me', {
+      cache: 'no-store',
     });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({} as any));
+        throw new Error(err.error || 'Not authenticated with Discord.');
+    }
     return response.json();
 }
 
@@ -58,7 +60,6 @@ async function getDiscordMember(userId: string) {
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
   const { setPageTitle, setHeaderActions, discordId, setDiscordId } = usePage();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const auth = useAuth();
   const firestore = useFirestore();
@@ -121,7 +122,7 @@ export default function DashboardPage() {
   }, [setPageTitle, setHeaderActions, user, isUserLoading, handleRefresh]);
   
   useEffect(() => {
-    const processLogin = async (accessToken: string) => {
+    const processLogin = async () => {
       if (!auth || !firestore) {
         toast({ variant: "destructive", title: "Login Error", description: "Firebase is not ready." });
         setIsProcessingLogin(false);
@@ -129,32 +130,37 @@ export default function DashboardPage() {
       }
       
       try {
+        const discordUser = await getDiscordUser();
+
+        // Ensure Firebase auth user is the Discord user (custom token login)
+        let firebaseUser = auth.currentUser;
+        if (!firebaseUser || firebaseUser.uid !== discordUser.id) {
+          const tokenRes = await fetchWithRetry('/api/auth/firebase-token', { cache: 'no-store' });
+          const tokenData = await tokenRes.json();
+          if (!tokenRes.ok) {
+            throw new Error(tokenData.error || 'Could not create Firebase session.');
+          }
+          const credential = await signInWithCustomToken(auth, tokenData.token);
+          firebaseUser = credential.user;
+        }
+
+        const idTokenResult = await firebaseUser.getIdTokenResult().catch(() => null);
+        const isAdminClaim = (idTokenResult?.claims as any)?.isAdmin === true;
+
         const guildRes = await fetchWithRetry('/api/discord/guild', {});
         const guildData = await guildRes.json();
         const guildId = guildData?.id;
         const guildOwnerId = guildData?.owner_id;
 
         if (!guildId) {
-            throw new Error("Discord Guild ID could not be retrieved from the server.");
+          throw new Error("Discord Guild ID could not be retrieved from the server.");
         }
-        
-        const [discordUser, adminRolesRes] = await Promise.all([
-            getDiscordUser(accessToken),
-            getDoc(doc(firestore, 'app_settings', 'admin_roles')),
-        ]);
         
         // Use the bot to fetch member data, not the user's token
         const discordMember = await getDiscordMember(discordUser.id);
 
         setDiscordId(discordUser.id);
         localStorage.setItem('discordUserId', discordUser.id);
-        localStorage.setItem('discordAccessToken', accessToken);
-
-        let firebaseUser = auth.currentUser;
-        if (!firebaseUser) {
-          const userCredential = await signInAnonymously(auth);
-          firebaseUser = userCredential.user;
-        }
         
         const displayName = discordMember?.nick || discordUser.global_name || discordUser.username;
         const profilePicture = discordUser.avatar
@@ -162,14 +168,12 @@ export default function DashboardPage() {
           : `https://cdn.discordapp.com/embed/avatars/${Number(discordUser.discriminator || 0) % 5}.png`;
 
         const userDiscordRoles = discordMember?.roles || [];
-        const adminRoleIds = adminRolesRes.exists() ? adminRolesRes.data().roles || [] : [];
-        
         const isGuildOwner = discordUser.id === guildOwnerId;
-        const hasAdminRole = userDiscordRoles.some((roleId: string) => adminRoleIds.includes(roleId));
-        const isAdmin = isGuildOwner || hasAdminRole;
+        // Trust server-issued claims for authorization; guild owner is informational.
+        const isAdmin = isAdminClaim || isGuildOwner;
 
         const userRef = doc(firestore, "users", discordUser.id);
-        const uidMapRef = doc(firestore, "firebase_uid_to_discord_id", firebaseUser.uid);
+        // Firebase UID is the Discord ID (custom token login).
         
         const userProfileData = {
           id: discordUser.id,
@@ -192,7 +196,6 @@ export default function DashboardPage() {
         
         // Non-blocking writes for performance
         setDocumentNonBlocking(userRef, userProfileData, { merge: true });
-        setDocumentNonBlocking(uidMapRef, { discordId: discordUser.id }, { merge: true });
 
         if (firebaseUser.displayName !== displayName || firebaseUser.photoURL !== profilePicture) {
             await updateProfile(firebaseUser, {
@@ -210,22 +213,16 @@ export default function DashboardPage() {
             title: "Login Failed",
             description: error.message || "Could not complete sign-in with Discord.",
         });
+        router.replace('/login');
       } finally {
         setIsProcessingLogin(false);
       }
     };
 
-    const accessToken = searchParams.get('access_token');
-    
-    if (accessToken) {
-        processLogin(accessToken);
-    } else {
-        // If there's no access token in the URL, we're not in an active login flow.
-        // The isUserLoading from useUser will handle the initial load state.
-        setIsProcessingLogin(false);
-    }
+    // Attempt to bootstrap from server-side Discord session cookie.
+    processLogin();
 
-  }, [searchParams, auth, firestore, toast, setDiscordId, router]);
+  }, [auth, firestore, toast, setDiscordId, router]);
   
   const isLoading = isUserLoading || isProcessingLogin || isLoadingBan;
 

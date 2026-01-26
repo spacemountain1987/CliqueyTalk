@@ -26,7 +26,9 @@ interface MusicQueueItem {
 }
 
 // The public key for verifying Discord interactions.
-const DISCORD_PUBLIC_KEY = "6a903d0ec86d3d1556aeb2a7ec1dd585ab35e9129d040a8149cdfb8ad4154561";
+// Prefer configuration via env; keep a fallback to avoid breaking existing deployments.
+const DISCORD_PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY
+    || "6a903d0ec86d3d1556aeb2a7ec1dd585ab35e9129d040a8149cdfb8ad4154561";
 
 // --- Main Interaction Handler ---
 export async function POST(req: NextRequest) {

@@ -1,5 +1,5 @@
-# CliqueyTalk
+# Firebase Studio
 
-This is the official repository for the CliqueyTalk application.
+This is a NextJS starter in Firebase Studio.
 
-This project is deployed using Firebase App Hosting.
+To get started, take a look at src/app/page.tsx.

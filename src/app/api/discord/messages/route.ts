@@ -1,7 +1,15 @@
 
 import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { requireDiscordSession } from '@/lib/discord-session';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  try {
+    await requireDiscordSession(request);
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const channelId = searchParams.get('channelId');
   const botToken = process.env.DISCORD_BOT_TOKEN;

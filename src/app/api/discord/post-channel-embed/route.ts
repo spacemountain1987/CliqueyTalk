@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/firebase/admin';
+import { requireFirebaseIdToken } from '@/lib/firebase-id-token';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,10 @@ async function postToDiscord(channelId: string, message: object) {
 // --- Main POST handler ---
 export async function POST(req: NextRequest) {
   try {
+    const decoded = await requireFirebaseIdToken(req);
+    if (!decoded.isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     const { channelId } = await req.json(); // This is the ID of the VOICE channel
 
     if (!channelId) {

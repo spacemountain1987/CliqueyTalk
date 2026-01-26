@@ -314,12 +314,20 @@ function BackupPlaylistManager() {
 function QueueToolsManager() {
     const [isSyncing, setIsSyncing] = useState(false);
     const { toast } = useToast();
+    const { user } = useUser();
 
     const handleSync = async () => {
         setIsSyncing(true);
         try {
+            if (!user) {
+                throw new Error('You must be signed in.');
+            }
+            const idToken = await user.getIdToken();
             const response = await fetch('/api/admin/sync-storage-queue', {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${idToken}`,
+                },
             });
             const data = await response.json();
             if (response.ok) {
@@ -531,6 +539,7 @@ function YouTubeCookieManager() {
     const [status, setStatus] = useState<'unknown' | 'testing' | 'valid' | 'stale' | 'error'>('unknown');
     const [testErrorMessage, setTestErrorMessage] = useState('');
     const { toast } = useToast();
+    const { user } = useUser();
     const [newCookie, setNewCookie] = useState('');
     const [generatedCommand, setGeneratedCommand] = useState('');
 
@@ -538,7 +547,15 @@ function YouTubeCookieManager() {
         setStatus('testing');
         setTestErrorMessage('');
         try {
-            const response = await fetch('/api/youtube/cookie-manager');
+            if (!user) {
+                throw new Error('You must be signed in.');
+            }
+            const idToken = await user.getIdToken();
+            const response = await fetch('/api/youtube/cookie-manager', {
+                headers: {
+                    'Authorization': `Bearer ${idToken}`,
+                },
+            });
             const data = await response.json();
             if (response.ok) {
                 setStatus(data.status);
@@ -551,9 +568,9 @@ function YouTubeCookieManager() {
             }
         } catch (error) {
             setStatus('error');
-            setTestErrorMessage('Failed to connect to the test API.');
+            setTestErrorMessage((error as any)?.message || 'Failed to connect to the test API.');
         }
-    }, []);
+    }, [user]);
 
     // Automatically test the cookie on component mount.
     useEffect(() => {

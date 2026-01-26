@@ -1,7 +1,14 @@
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireDiscordSession } from '@/lib/discord-session';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  try {
+    await requireDiscordSession(req);
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const guildId = process.env.DISCORD_GUILD_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;
 

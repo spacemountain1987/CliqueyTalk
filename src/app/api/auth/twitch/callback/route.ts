@@ -4,20 +4,22 @@ import { getLatestSecret } from '@/lib/secrets';
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
+  const state = req.nextUrl.searchParams.get('state');
 
   if (!code) {
     return new Response('No code provided.', { status: 400 });
   }
 
-  try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    if (!appUrl) {
-      throw new Error('Server configuration error: NEXT_PUBLIC_APP_URL is not defined.');
-    }
+  const expectedState = req.cookies.get('twitch_oauth_state')?.value;
+  if (!state || !expectedState || state !== expectedState) {
+    return new Response('Authorization failed: Invalid state.', { status: 400 });
+  }
 
-    const [clientId, clientSecret] = await Promise.all([
+  try {
+    const [clientId, clientSecret, appUrl] = await Promise.all([
         getLatestSecret('TWITCH_CLIENT_ID'),
         getLatestSecret('TWITCH_CLIENT_SECRET'),
+        getLatestSecret('NEXT_PUBLIC_APP_URL')
     ]);
 
     const redirectUri = `${appUrl.trim()}/api/auth/twitch/callback`;
@@ -39,21 +41,32 @@ export async function GET(req: NextRequest) {
     if (!tokenResponse.ok) {
       return new Response(JSON.stringify(tokenData), { status: 500 });
     }
-    
+
     const dashboardUrl = new URL('/dashboard', appUrl.trim());
-    dashboardUrl.searchParams.set('twitch_access_token', tokenData.access_token);
-    
-    return NextResponse.redirect(dashboardUrl);
+    const res = NextResponse.redirect(dashboardUrl);
+
+    res.cookies.set('twitch_oauth_state', '', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 0,
+    });
+
+    res.cookies.set('twitch_access_token', tokenData.access_token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 60 * 60,
+    });
+
+    return res;
 
   } catch (error) {
     console.error('An unexpected error occurred during Twitch authentication:', error);
-    if (error instanceof Error) {
-        if (error.message.includes('Secret Manager')) {
-            return new Response('Internal Server Error: Could not load critical application configuration from Secret Manager. Please verify that TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET secrets exist and are accessible.', { status: 500 });
-        }
-        if (error.message.includes('NEXT_PUBLIC_APP_URL')) {
-            return new Response('Internal Server Error: Application URL is not configured on the server.', { status: 500 });
-        }
+    if (error instanceof Error && error.message.includes('Secret Manager')) {
+        return new Response('Internal Server Error: Could not load critical application configuration from Secret Manager. Please verify that TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET secrets exist and are accessible.', { status: 500 });
     }
     return new Response('An unexpected error occurred.', { status: 500 });
   }

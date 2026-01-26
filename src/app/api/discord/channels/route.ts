@@ -1,10 +1,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireDiscordSession } from '@/lib/discord-session';
 
 const VIEW_CHANNEL_PERMISSION = BigInt(1 << 10);
 const ADMINISTRATOR_PERMISSION = BigInt(1 << 3);
 
 export async function GET(request: NextRequest) {
+  try {
+    await requireDiscordSession(request);
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
   const channelType = searchParams.get('channelType'); // 'text' or 'voice'
