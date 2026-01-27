@@ -1,20 +1,35 @@
-# Use the official Node.js 20 image.
-FROM node:20
+FROM node:20-bookworm-slim AS base
 
-# Set the working directory inside the container
 WORKDIR /usr/src/app
 
-# Update package lists and install FFmpeg
-RUN apt-get update && apt-get install -y ffmpeg
+# Required for audio processing features.
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends ffmpeg \
+	&& rm -rf /var/lib/apt/lists/*
 
-# Copy package.json and package-lock.json to leverage Docker cache
-COPY package*.json ./
+FROM base AS deps
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Install application dependencies
-RUN npm install
-
-# Copy the rest of the application's source code
+FROM base AS builder
+COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY . .
+RUN npm run build
 
-# The Next.js application will be started by App Hosting's default run command,
-# so we don't need a CMD or ENTRYPOINT.
+FROM base AS runner
+ENV NODE_ENV=production
+
+# Install only production deps for runtime.
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY --from=builder /usr/src/app/public ./public
+COPY --from=builder /usr/src/app/.next ./.next
+COPY --from=builder /usr/src/app/next.config.mjs ./next.config.mjs
+
+RUN chown -R node:node /usr/src/app
+USER node
+
+# Cloud Run/App Hosting provides PORT (typically 8080).
+EXPOSE 8080
+CMD ["sh", "-c", "npm start -- -p ${PORT:-8080}"]

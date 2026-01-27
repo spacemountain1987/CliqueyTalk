@@ -21,17 +21,34 @@ export async function getLatestSecret(secretId: string): Promise<string> {
     const isProduction = process.env.NODE_ENV === 'production';
     const envValue = process.env[secretId];
 
-    // During local/dev, we default to env vars to avoid requiring ADC.
-    // If you *do* want Secret Manager locally, set USE_SECRET_MANAGER=true (and configure ADC).
-    const allowSecretManagerInDev =
-        process.env.USE_SECRET_MANAGER === 'true' ||
-        Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+    const forceSecretManager = process.env.USE_SECRET_MANAGER === 'true';
 
-    // Local/dev convenience: allow using env vars instead of Secret Manager.
-    // In production we still prefer Secret Manager for sensitive configuration.
-    if (!isProduction && envValue) {
+    // During `next build`, routes may be evaluated for static analysis/export.
+    // In production we expect secrets to be injected at runtime by the platform
+    // (e.g. Firebase App Hosting via apphosting.yaml). Avoid hard failing or
+    // trying Secret Manager during the build phase.
+    const isNextBuildPhase =
+        process.env.NEXT_PHASE === 'phase-production-build' ||
+        process.env.NEXT_PHASE === 'phase-export';
+    if (isNextBuildPhase && !envValue) {
+        console.warn(
+            `Secret '${secretId}' is not available during build; ` +
+            `it must be provided at runtime (e.g. via App Hosting env injection).`
+        );
+        return '';
+    }
+
+    // If the secret is already injected into the environment (e.g. App Hosting), prefer it.
+    // This avoids unnecessary Secret Manager calls and keeps the app running even if
+    // Secret Manager APIs are temporarily unavailable.
+    if (envValue && !forceSecretManager) {
         return envValue;
     }
+
+    // During local/dev, allow Secret Manager only if explicitly enabled or credentials are present.
+    const allowSecretManagerInDev =
+        forceSecretManager ||
+        Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS);
 
     if (!isProduction && !allowSecretManagerInDev) {
         throw new Error(

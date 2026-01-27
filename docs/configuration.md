@@ -5,7 +5,8 @@ This repo is designed to run with Google Secret Manager as the source of truth f
 ## Local dev (recommended)
 
 1) Install and authenticate ADC:
-- `gcloud auth application-default login`
+- Install Google Cloud SDK (gcloud) and run: `gcloud auth application-default login`
+  - If you can't install gcloud, you can use a service account JSON by setting `GOOGLE_APPLICATION_CREDENTIALS`.
 
 2) Point at the correct project:
 - Set `GCP_PROJECT` to the GCP project that contains your secrets.
@@ -15,6 +16,12 @@ This repo is designed to run with Google Secret Manager as the source of truth f
 
 4) Run:
 - `npm run dev`
+
+## Production (Firebase App Hosting)
+
+- App Hosting injects Secret Manager values into runtime environment variables via [apphosting.yaml](../apphosting.yaml).
+- Ensure your App Hosting runtime service account can access the referenced secrets.
+- Update your Discord/Twitch OAuth redirect URLs to match your deployed `NEXT_PUBLIC_APP_URL`.
 
 ## Secrets to create in Google Secret Manager
 
