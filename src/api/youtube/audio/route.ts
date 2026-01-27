@@ -27,11 +27,8 @@ export async function GET(request: NextRequest) {
     
     // To increase reliability in serverless environments, we buffer the entire stream
     // on the server before sending it to the client.
-    const chunks = [];
-    for await (const chunk of stream) {
-        chunks.push(chunk);
-    }
-    const buffer = Buffer.concat(chunks);
+    const arrayBuffer = await new Response(stream as any).arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
     return new Response(buffer, {
       headers: {

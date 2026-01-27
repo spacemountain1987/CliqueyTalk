@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, from 'react';
+import React from 'react';
 import {
   Sidebar,
   SidebarHeader,
@@ -56,13 +56,16 @@ export function AppSidebar() {
   const isUserAdmin = userProfile?.isAdmin === true;
   const isCheckingAdmin = isLoadingProfile || !discordId;
   
-  const handleLogout = () => {
-    signOut(auth).then(() => {
-      localStorage.removeItem('discordUserId');
-      localStorage.removeItem('discordAccessToken');
-      setDiscordId(null);
-      router.push('/login');
-    });
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' }).catch(() => null);
+    } finally {
+      signOut(auth).then(() => {
+        localStorage.removeItem('discordUserId');
+        setDiscordId(null);
+        router.push('/login');
+      });
+    }
   };
 
   const isUiLoading = isUserLoading || (discordId && isLoadingProfile);

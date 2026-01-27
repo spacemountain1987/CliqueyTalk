@@ -1,15 +1,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/firebase/admin';
+import { requireFirebaseIdToken } from '@/lib/firebase-id-token';
+import { getLatestSecretCached } from '@/lib/secrets';
 
 export const dynamic = 'force-dynamic';
 
 // Helper to post a message to a Discord channel
 async function postToDiscord(channelId: string, message: object) {
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-  if (!botToken) {
-    throw new Error('DISCORD_BOT_TOKEN is not configured.');
-  }
+  const botToken = await getLatestSecretCached('DISCORD_BOT_TOKEN');
 
   const url = `https://discord.com/api/v10/channels/${channelId}/messages`;
   const headers = {
@@ -35,6 +34,10 @@ async function postToDiscord(channelId: string, message: object) {
 // --- Main POST handler ---
 export async function POST(req: NextRequest) {
   try {
+    const decoded = await requireFirebaseIdToken(req);
+    if (!decoded.isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     const { channelId } = await req.json(); // This is the ID of the VOICE channel
 
     if (!channelId) {

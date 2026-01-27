@@ -1,10 +1,16 @@
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db, storage } from '@/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { requireFirebaseIdToken } from '@/lib/firebase-id-token';
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
+    const decoded = await requireFirebaseIdToken(req);
+    if (!decoded.isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const bucket = storage.bucket();
     const [files] = await bucket.getFiles({ prefix: 'queued-songs/' });
     

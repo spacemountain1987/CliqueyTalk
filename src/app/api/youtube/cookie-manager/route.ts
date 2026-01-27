@@ -2,11 +2,31 @@
 import { NextResponse } from 'next/server';
 import Innertube from 'youtubei.js';
 import { getLatestSecret } from '@/lib/secrets';
+import { NextRequest } from 'next/server';
+import { rateLimit } from '@/lib/rate-limit';
+import { requireFirebaseIdToken } from '@/lib/firebase-id-token';
 
 const secretId = 'YOUTUBE_COOKIE';
 
 // GET: Test the current cookie
-export async function GET() {
+export async function GET(req: NextRequest) {
+    const rl = rateLimit(req, { key: 'youtube-cookie-manager', capacity: 10, refillPerSecond: 0.1 });
+    if (!rl.allowed) {
+        return NextResponse.json(
+            { error: 'Too many requests.' },
+            { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds) } }
+        );
+    }
+
+    try {
+        const decoded = await requireFirebaseIdToken(req);
+        if (!decoded.isAdmin) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+    } catch (e: any) {
+        return NextResponse.json({ error: e?.message || 'Unauthorized' }, { status: 401 });
+    }
+
     try {
         const cookie = await getLatestSecret(secretId);
         const youtube = await Innertube.create({ cookie });

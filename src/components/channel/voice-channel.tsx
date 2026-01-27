@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -10,10 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import { Button } from '../ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { useUser, useFirestore, useStorage, useMemoFirebase } from '@/firebase/provider';
-import { useDoc } from '@/firebase/firestore/use-doc';
-import { useCollection, type WithId } from '@/firebase/firestore/use-collection';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useUser, useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, useCollection, WithId, useStorage, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { doc, getDoc, DocumentReference, collection, query, orderBy, limit, writeBatch, getDocs, serverTimestamp, addDoc, Unsubscribe } from 'firebase/firestore';
 import { getDownloadURL, ref } from 'firebase/storage';
@@ -39,11 +37,11 @@ import { z } from 'zod';
 
 const uploadQueueSchema = z.object({
   name: z.string().min(2, 'Song name must be at least 2 characters long.').max(50, 'Song name must be 50 characters or less.'),
-  audioFile: z.any()
-    .refine((files): files is FileList => files?.length === 1, 'Audio file is required.')
-    .refine((files) => files?.[0]?.size <= 10 * 1024 * 1024, `Max file size is 10MB.`)
+  audioFile: z.instanceof(FileList)
+    .refine(files => files?.length === 1, 'Audio file is required.')
+    .refine(files => files?.[0]?.size <= 10 * 1024 * 1024, `Max file size is 10MB.`)
     .refine(
-      (files) => ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a'].includes(files?.[0]?.type),
+      files => ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a'].includes(files?.[0]?.type),
       'Only .mp3, .wav, .ogg, or .m4a files are accepted.'
     ),
 });
@@ -259,7 +257,7 @@ function CurrentUserCard({ user, isVideoChannel, channel, stream, mediaError, is
     if (stream) {
       stream.getAudioTracks().forEach(track => (track.enabled = !isMuted));
       if (isVideoChannel) {
-        stream.getVideoTracks().forEach(track => (track.enabled = isCameraOn));
+                stream.getVideoTracks().forEach(track => (track.enabled = Boolean(isCameraOn)));
       }
     }
   }, [isMuted, isCameraOn, stream, isVideoChannel]);
@@ -622,7 +620,7 @@ function AudioBotCard({ channel, isVideoChannel, isController, audioContext, out
         if (!firestore || !channel?.id) return null;
         return doc(firestore, `voice_channels/${channel.id}/ephemeral_state/soundboard`);
     }, [firestore, channel?.id]);
-    const { data: soundboardState } = useDoc<any>(soundboardState);
+    const { data: soundboardState } = useDoc<any>(ephemeralStateRef);
 
     const audioPlayerRef = useRef<HTMLAudioElement>(null);
     const soundboardPlayerRef = useRef<HTMLAudioElement>(null);
@@ -760,8 +758,12 @@ function AudioBotCard({ channel, isVideoChannel, isController, audioContext, out
             toast({ title: 'Song Uploaded', description: `"${data.name}" has been added to the queue.` });
             reset();
 
-            const botStateSnap = await getDoc(audioBotStateRef);
-            if (!botStateSnap.exists() || botStateSnap.data()?.status === 'stopped') {
+            if (audioBotStateRef) {
+                const botStateSnap = await getDoc(audioBotStateRef);
+                if (!botStateSnap.exists() || botStateSnap.data()?.status === 'stopped') {
+                    playNextInQueue();
+                }
+            } else {
                 playNextInQueue();
             }
 
@@ -1251,7 +1253,7 @@ export function VoiceChannel({ channel, onJoin }: { channel: any, onJoin: (passw
                 const res = await fetch('/api/twitch/bot', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ channel: twitchChannelName }),
+                    body: JSON.stringify({ voiceChannelId: channel.id }),
                 });
                 if (!res.ok) {
                     throw new Error(`Failed to join Twitch channel: ${res.statusText}`);
@@ -1272,7 +1274,7 @@ export function VoiceChannel({ channel, onJoin }: { channel: any, onJoin: (passw
             clearInterval(intervalId);
         }
     };
-}, [channel?.twitchChannel, isUserInChannel]);
+}, [channel?.twitchChannel, isUserInChannel, channel.id]);
 
   if (!channel) {
     return (

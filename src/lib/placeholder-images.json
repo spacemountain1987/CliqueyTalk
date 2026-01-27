@@ -1,0 +1,64 @@
+{
+  "placeholderImages": [
+    {
+      "id": "user-1",
+      "description": "User placeholder 1",
+      "imageUrl": "https://placehold.co/128x128/png",
+      "imageHint": "abstract avatar"
+    },
+    {
+      "id": "user-2",
+      "description": "User placeholder 2",
+      "imageUrl": "https://placehold.co/128x128/png",
+      "imageHint": "abstract avatar"
+    },
+    {
+      "id": "user-3",
+      "description": "User placeholder 3",
+      "imageUrl": "https://placehold.co/128x128/png",
+      "imageHint": "abstract avatar"
+    },
+    {
+      "id": "user-4",
+      "description": "User placeholder 4",
+      "imageUrl": "https://placehold.co/128x128/png",
+      "imageHint": "abstract avatar"
+    },
+    {
+      "id": "user-5",
+      "description": "User placeholder 5",
+      "imageUrl": "https://placehold.co/128x128/png",
+      "imageHint": "abstract avatar"
+    },
+    {
+      "id": "user-6",
+      "description": "User placeholder 6",
+      "imageUrl": "https://placehold.co/128x128/png",
+      "imageHint": "abstract avatar"
+    },
+    {
+      "id": "user-7",
+      "description": "User placeholder 7",
+      "imageUrl": "https://placehold.co/128x128/png",
+      "imageHint": "abstract avatar"
+    },
+    {
+      "id": "user-8",
+      "description": "User placeholder 8",
+      "imageUrl": "https://placehold.co/128x128/png",
+      "imageHint": "abstract avatar"
+    },
+    {
+      "id": "user-9",
+      "description": "User placeholder 9",
+      "imageUrl": "https://placehold.co/128x128/png",
+      "imageHint": "abstract avatar"
+    },
+    {
+      "id": "user-10",
+      "description": "User placeholder 10",
+      "imageUrl": "https://placehold.co/128x128/png",
+      "imageHint": "abstract avatar"
+    }
+  ]
+}

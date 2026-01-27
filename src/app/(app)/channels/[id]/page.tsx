@@ -17,7 +17,7 @@ export default function ChannelPage() {
   const searchParams = useSearchParams();
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  const discordId = user?.id;
+  const discordId = user?.uid;
 
   const channelRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;

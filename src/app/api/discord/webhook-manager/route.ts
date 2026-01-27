@@ -1,12 +1,25 @@
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireFirebaseIdToken } from '@/lib/firebase-id-token';
+import { getLatestSecretCached } from '@/lib/secrets';
 
 const BOT_USER_AGENT = 'DiscordBot (CliqueyTalk, 1.0)';
 
 // POST: Create a webhook for a given channel
-export async function POST(request: Request) {
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-  if (!botToken) {
+export async function POST(request: NextRequest) {
+  try {
+    const decoded = await requireFirebaseIdToken(request);
+    if (!decoded.isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Unauthorized' }, { status: 401 });
+  }
+
+  let botToken: string;
+  try {
+    botToken = await getLatestSecretCached('DISCORD_BOT_TOKEN');
+  } catch {
     return NextResponse.json({ error: 'Server is not configured with a bot token.' }, { status: 500 });
   }
 
@@ -44,9 +57,20 @@ export async function POST(request: Request) {
 }
 
 // DELETE: Delete a webhook by its ID
-export async function DELETE(request: Request) {
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-  if (!botToken) {
+export async function DELETE(request: NextRequest) {
+  try {
+    const decoded = await requireFirebaseIdToken(request);
+    if (!decoded.isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Unauthorized' }, { status: 401 });
+  }
+
+  let botToken: string;
+  try {
+    botToken = await getLatestSecretCached('DISCORD_BOT_TOKEN');
+  } catch {
     return NextResponse.json({ error: 'Server is not configured with a bot token.' }, { status: 500 });
   }
 

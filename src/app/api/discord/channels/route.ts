@@ -1,19 +1,31 @@
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireDiscordSession } from '@/lib/discord-session';
+import { getLatestSecretCached } from '@/lib/secrets';
 
 const VIEW_CHANNEL_PERMISSION = BigInt(1 << 10);
 const ADMINISTRATOR_PERMISSION = BigInt(1 << 3);
 
 export async function GET(request: NextRequest) {
+  try {
+    await requireDiscordSession(request);
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
   const channelType = searchParams.get('channelType'); // 'text' or 'voice'
 
-  const guildId = process.env.DISCORD_GUILD_ID;
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-
-  if (!guildId || !botToken) {
-    console.error("API Error: DISCORD_GUILD_ID or DISCORD_BOT_TOKEN is not configured in environment variables.");
+  let guildId: string;
+  let botToken: string;
+  try {
+    [guildId, botToken] = await Promise.all([
+      getLatestSecretCached('DISCORD_GUILD_ID'),
+      getLatestSecretCached('DISCORD_BOT_TOKEN'),
+    ]);
+  } catch {
+    console.error("API Error: DISCORD_GUILD_ID or DISCORD_BOT_TOKEN is not configured.");
     return NextResponse.json(
       { error: 'Server is not configured to fetch channels. Required secrets are missing.' },
       { status: 500 }
