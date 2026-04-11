@@ -120,20 +120,24 @@ async function initializeBot() {
                 return;
             }
 
-            // !oops command
+            // !oops command — only lets the requester remove their own last song
             if (message.toLowerCase() === '!oops') {
                 try {
                     const queueRef = db.collection('music_queue');
-                    const lastSongQuery = queueRef.orderBy('addedAt', 'desc').limit(1);
+                    // Find the most recent song added by this specific requester.
+                    const lastSongQuery = queueRef
+                        .where('requestedBy', '==', requester)
+                        .orderBy('addedAt', 'desc')
+                        .limit(1);
                     const lastSongSnapshot = await lastSongQuery.get();
 
                     if (!lastSongSnapshot.empty) {
                         const songToRemoveDoc = lastSongSnapshot.docs[0];
                         const removedSongTitle = songToRemoveDoc.data().title;
                         await songToRemoveDoc.ref.delete();
-                        newClient.say(channel, `@${requester}, removed the last song from the queue: "${removedSongTitle}".`);
+                        newClient.say(channel, `@${requester}, removed your last song from the queue: "${removedSongTitle}".`);
                     } else {
-                        newClient.say(channel, `@${requester}, the song queue is already empty.`);
+                        newClient.say(channel, `@${requester}, you don't have any songs in the queue.`);
                     }
                 } catch (error) {
                     console.error('Error during Twitch !oops command:', error);

@@ -65,54 +65,80 @@ interface DiscordEmoji {
     animated: boolean;
 }
 
-const parseDiscordContent = (content: string, message: DiscordMessage) => {
-    let parsedContent = content;
+/** Escape HTML special characters to prevent XSS when interpolating into innerHTML. */
+function escapeHtml(unsafe: string): string {
+    return unsafe
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
-    // 1. Parse Mentions
+/** Validate that a URL uses an allowed protocol (https or http only). */
+function isSafeUrl(url: string): boolean {
+    try {
+        const parsed = new URL(url);
+        return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+    } catch {
+        return false;
+    }
+}
+
+const parseDiscordContent = (content: string, message: DiscordMessage) => {
+    // HTML-escape the raw message content first to prevent XSS.
+    let parsedContent = escapeHtml(content);
+
+    // 1. Parse Mentions (displayName is also escaped)
     message.mentions.forEach(mention => {
-        const mentionTag = `<@${mention.id}>`;
-        const mentionTagWithNickname = `<@!${mention.id}>`;
-        const displayName = `@${mention.global_name || mention.username}`;
+        const mentionTag = `&lt;@${escapeHtml(mention.id)}&gt;`;
+        const mentionTagWithNickname = `&lt;@!${escapeHtml(mention.id)}&gt;`;
+        const displayName = escapeHtml(`@${mention.global_name || mention.username}`);
         
         parsedContent = parsedContent.replace(new RegExp(mentionTag, 'g'), `<span class="bg-primary/20 text-primary font-semibold rounded px-1">${displayName}</span>`);
         parsedContent = parsedContent.replace(new RegExp(mentionTagWithNickname, 'g'), `<span class="bg-primary/20 text-primary font-semibold rounded px-1">${displayName}</span>`);
     });
 
-    // 2. Parse Custom Emojis
-    parsedContent = parsedContent.replace(/<a?:(\w+):(\d+)>/g, (match, name, id) => {
-        const url = `https://cdn.discordapp.com/emojis/${id}.${match.startsWith('<a:') ? 'gif' : 'png'}`;
-        return `<img src="${url}" alt="${name}" class="inline-block h-5 w-5 mx-0.5" />`;
+    // 2. Parse Custom Emojis (only allow Discord CDN URLs with numeric IDs)
+    parsedContent = parsedContent.replace(/&lt;a?:(\w+):(\d+)&gt;/g, (match, name, id) => {
+        const escapedName = escapeHtml(name);
+        const url = `https://cdn.discordapp.com/emojis/${encodeURIComponent(id)}.${match.startsWith('&lt;a:') ? 'gif' : 'png'}`;
+        return `<img src="${url}" alt="${escapedName}" class="inline-block h-5 w-5 mx-0.5" />`;
     });
 
     let mediaContent = '';
     
-    // 3. Handle Embeds (like Tenor GIFs)
+    // 3. Handle Embeds (like Tenor GIFs) — validate URLs before using in attributes
     if (message.embeds && message.embeds.length > 0) {
         message.embeds.forEach(embed => {
             const thumbnailUrl = embed.thumbnail?.url;
             const mediaUrl = embed.image?.url || embed.url;
             const contentUrl = embed.url;
 
-            if (thumbnailUrl && contentUrl) {
-                 mediaContent += `<a href="${mediaUrl || contentUrl}" target="_blank" rel="noopener noreferrer"><img src="${thumbnailUrl}" class="mt-2 rounded-lg max-w-full h-auto cursor-pointer" /></a>`;
-                 // Remove the raw link from the text if it's there
-                 if(contentUrl && parsedContent.includes(contentUrl)) {
-                    parsedContent = parsedContent.replace(contentUrl, '');
+            if (thumbnailUrl && contentUrl && isSafeUrl(thumbnailUrl) && isSafeUrl(contentUrl)) {
+                 const safeLinkUrl = escapeHtml(mediaUrl && isSafeUrl(mediaUrl) ? mediaUrl : contentUrl);
+                 mediaContent += `<a href="${safeLinkUrl}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(thumbnailUrl)}" class="mt-2 rounded-lg max-w-full h-auto cursor-pointer" /></a>`;
+                 const escapedContentUrl = escapeHtml(contentUrl);
+                 if(escapedContentUrl && parsedContent.includes(escapedContentUrl)) {
+                    parsedContent = parsedContent.replace(escapedContentUrl, '');
                  }
-            } else if (mediaUrl) { // Handle image-only embeds
-                mediaContent += `<a href="${mediaUrl}" target="_blank" rel="noopener noreferrer"><img src="${mediaUrl}" class="mt-2 rounded-lg max-w-full h-auto" /></a>`;
-                if(contentUrl && parsedContent.includes(contentUrl)) {
-                    parsedContent = parsedContent.replace(contentUrl, '');
+            } else if (mediaUrl && isSafeUrl(mediaUrl)) {
+                mediaContent += `<a href="${escapeHtml(mediaUrl)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(mediaUrl)}" class="mt-2 rounded-lg max-w-full h-auto" /></a>`;
+                if(contentUrl) {
+                    const escapedContentUrl = escapeHtml(contentUrl);
+                    if(parsedContent.includes(escapedContentUrl)) {
+                        parsedContent = parsedContent.replace(escapedContentUrl, '');
+                    }
                  }
             }
         });
     }
 
-    // 4. Handle Attachments
+    // 4. Handle Attachments — validate URLs before using in attributes
     if (message.attachments && message.attachments.length > 0) {
         message.attachments.forEach(attachment => {
-            if (attachment.content_type?.startsWith('image/')) {
-                mediaContent += `<a href="${attachment.url}" target="_blank" rel="noopener noreferrer"><img src="${attachment.url}" class="mt-2 rounded-lg max-w-full h-auto" /></a>`;
+            if (attachment.content_type?.startsWith('image/') && isSafeUrl(attachment.url)) {
+                mediaContent += `<a href="${escapeHtml(attachment.url)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(attachment.url)}" class="mt-2 rounded-lg max-w-full h-auto" /></a>`;
             }
         });
     }

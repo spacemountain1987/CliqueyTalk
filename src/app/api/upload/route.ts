@@ -111,7 +111,6 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('Generate Signed URL API: Full error object:', error);
-    const errorMessage = error.message || 'An unknown error occurred during signed URL generation.';
-    return NextResponse.json({ error: `Signed URL API failed: ${errorMessage}` }, { status: 500 });
+    return NextResponse.json({ error: 'An internal error occurred during upload.' }, { status: 500 });
   }
 }

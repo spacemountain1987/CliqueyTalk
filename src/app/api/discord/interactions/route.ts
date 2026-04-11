@@ -27,14 +27,10 @@ interface MusicQueueItem {
 }
 
 // The public key for verifying Discord interactions.
-// Prefer configuration via Secret Manager/env; keep a fallback to avoid breaking existing deployments.
+// Fail closed: if the key cannot be loaded, reject all interactions.
 async function getDiscordPublicKey(): Promise<string> {
     if (process.env.DISCORD_PUBLIC_KEY) return process.env.DISCORD_PUBLIC_KEY;
-    try {
-        return await getLatestSecretCached('DISCORD_PUBLIC_KEY');
-    } catch {
-        return "6a903d0ec86d3d1556aeb2a7ec1dd585ab35e9129d040a8149cdfb8ad4154561";
-    }
+    return await getLatestSecretCached('DISCORD_PUBLIC_KEY');
 }
 
 // --- Main Interaction Handler ---
@@ -47,7 +43,13 @@ export async function POST(req: NextRequest) {
     return new NextResponse('Bad request signature', { status: 400 });
   }
 
-    const publicKey = await getDiscordPublicKey();
+    let publicKey: string;
+    try {
+      publicKey = await getDiscordPublicKey();
+    } catch (err) {
+      console.error('Failed to load DISCORD_PUBLIC_KEY:', err);
+      return new NextResponse('Server misconfigured', { status: 500 });
+    }
     const isValid = verifyKey(
         rawBody,
         signature,
@@ -147,8 +149,13 @@ export async function POST(req: NextRequest) {
         } else {
             const lastSongDoc = lastSongSnapshot.docs[0];
             const songData = lastSongDoc.data() as MusicQueueItem;
-            await lastSongDoc.ref.delete();
-            content = `✅ Removed the last song from the queue: \"${songData.title}\"`;
+            // Only allow the user who requested the song (or if no requester is tracked) to remove it.
+            if (songData.requesterId && userId && songData.requesterId !== userId) {
+                content = `❌ You can only remove your own song requests.`;
+            } else {
+                await lastSongDoc.ref.delete();
+                content = `✅ Removed the last song from the queue: \"${songData.title}\"`;
+            }
         }
         
         return NextResponse.json({

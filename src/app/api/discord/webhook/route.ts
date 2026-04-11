@@ -21,6 +21,12 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Validate webhook URL to prevent SSRF — only allow Discord webhook endpoints.
+    const DISCORD_WEBHOOK_PATTERN = /^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\/\d+\/[\w-]+$/;
+    if (!DISCORD_WEBHOOK_PATTERN.test(webhookUrl)) {
+      return NextResponse.json({ error: 'Invalid webhook URL.' }, { status: 400 });
+    }
     
     if (!content || !username) {
       return NextResponse.json({ error: 'Missing required fields: content, username' }, { status: 400 });
