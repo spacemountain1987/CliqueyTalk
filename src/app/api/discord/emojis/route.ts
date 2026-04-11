@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireDiscordSession } from '@/lib/discord-session';
 import { getLatestSecretCached } from '@/lib/secrets';
+import { isNonEmptyString } from '@/lib/discord-validators';
 
 export async function GET(req: NextRequest) {
   try {
@@ -20,6 +21,13 @@ export async function GET(req: NextRequest) {
   } catch {
     return NextResponse.json(
       { error: 'Server is not configured to fetch emojis.' },
+      { status: 500 }
+    );
+  }
+
+  if (!isNonEmptyString(guildId) || !isNonEmptyString(botToken)) {
+    return NextResponse.json(
+      { error: 'Server is not configured to fetch emojis. Required secrets are empty.' },
       { status: 500 }
     );
   }

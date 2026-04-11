@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireFirebaseIdToken } from '@/lib/firebase-id-token';
+import { isValidDiscordWebhookUrl } from '@/lib/discord-validators';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,8 +18,15 @@ export async function POST(request: NextRequest) {
 
     if (!webhookUrl) {
       return NextResponse.json(
-        { error: 'Server is not configured for webhook messages.' },
-        { status: 500 }
+        { error: 'Missing required field: webhookUrl' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof webhookUrl !== 'string' || !isValidDiscordWebhookUrl(webhookUrl)) {
+      return NextResponse.json(
+        { error: 'Invalid webhookUrl. Must be a valid Discord webhook URL (https://discord.com/api/webhooks/...).' },
+        { status: 400 }
       );
     }
     

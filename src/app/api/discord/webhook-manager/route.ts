@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireFirebaseIdToken } from '@/lib/firebase-id-token';
 import { getLatestSecretCached } from '@/lib/secrets';
+import { isValidSnowflake, isNonEmptyString } from '@/lib/discord-validators';
 
 const BOT_USER_AGENT = 'DiscordBot (CliqueyTalk, 1.0)';
 
@@ -23,10 +24,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Server is not configured with a bot token.' }, { status: 500 });
   }
 
+  if (!isNonEmptyString(botToken)) {
+    return NextResponse.json({ error: 'Server is not configured with a bot token. Secret is empty.' }, { status: 500 });
+  }
+
   try {
     const { channelId } = await request.json();
     if (!channelId) {
       return NextResponse.json({ error: 'Channel ID is required.' }, { status: 400 });
+    }
+
+    if (!isValidSnowflake(channelId)) {
+      return NextResponse.json({ error: 'Invalid Channel ID format. Expected a Discord snowflake ID.' }, { status: 400 });
     }
 
     const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/webhooks`, {
@@ -74,10 +83,18 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Server is not configured with a bot token.' }, { status: 500 });
   }
 
+  if (!isNonEmptyString(botToken)) {
+    return NextResponse.json({ error: 'Server is not configured with a bot token. Secret is empty.' }, { status: 500 });
+  }
+
   try {
     const { webhookId } = await request.json();
     if (!webhookId) {
       return NextResponse.json({ error: 'Webhook ID is required.' }, { status: 400 });
+    }
+
+    if (!isValidSnowflake(webhookId)) {
+      return NextResponse.json({ error: 'Invalid Webhook ID format. Expected a Discord snowflake ID.' }, { status: 400 });
     }
 
     const response = await fetch(`https://discord.com/api/v10/webhooks/${webhookId}`, {
