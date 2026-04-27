@@ -29,6 +29,11 @@ export async function GET(request: NextRequest) {
     return new Response('Unauthorized', { status: 401 });
   }
 
+  // Reject path traversal sequences before the prefix check.
+  if (path.includes('..') || path.includes('//')) {
+    return new Response('Invalid storage path', { status: 400 });
+  }
+
   // Prevent arbitrary bucket reads.
   if (!ALLOWED_PREFIXES.some((p) => path.startsWith(p))) {
     return new Response('Invalid storage path', { status: 400 });
