@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 import { requireDiscordSession } from '@/lib/discord-session';
 import { getLatestSecretCached } from '@/lib/secrets';
+import { isValidSnowflake, isNonEmptyString } from '@/lib/discord-validators';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,12 +20,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Channel ID is required.' }, { status: 400 });
   }
 
+  if (!isValidSnowflake(channelId)) {
+    return NextResponse.json({ error: 'Invalid Channel ID format. Expected a Discord snowflake ID.' }, { status: 400 });
+  }
+
   try {
     botToken = await getLatestSecretCached('DISCORD_BOT_TOKEN');
   } catch {
     console.error("API Error: DISCORD_BOT_TOKEN is not configured.");
     return NextResponse.json(
       { error: 'Server is not configured for chat.' },
+      { status: 500 }
+    );
+  }
+
+  if (!isNonEmptyString(botToken)) {
+    console.error('API Error: DISCORD_BOT_TOKEN resolved to an empty value.');
+    return NextResponse.json(
+      { error: 'Server is not configured for chat. Bot token is empty.' },
       { status: 500 }
     );
   }

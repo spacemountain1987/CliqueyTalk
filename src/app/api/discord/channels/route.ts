@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireDiscordSession } from '@/lib/discord-session';
 import { getLatestSecretCached } from '@/lib/secrets';
+import { isValidSnowflake, isNonEmptyString } from '@/lib/discord-validators';
 
 const VIEW_CHANNEL_PERMISSION = BigInt(1 << 10);
 const ADMINISTRATOR_PERMISSION = BigInt(1 << 3);
@@ -17,6 +18,14 @@ export async function GET(request: NextRequest) {
   const userId = searchParams.get('userId');
   const channelType = searchParams.get('channelType'); // 'text' or 'voice'
 
+  if (!userId) {
+    return NextResponse.json({ error: 'User ID is required for permission check.' }, { status: 400 });
+  }
+
+  if (!isValidSnowflake(userId)) {
+    return NextResponse.json({ error: 'Invalid User ID format. Expected a Discord snowflake ID.' }, { status: 400 });
+  }
+
   let guildId: string;
   let botToken: string;
   try {
@@ -31,9 +40,13 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-  
-  if (!userId) {
-    return NextResponse.json({ error: 'User ID is required for permission check.' }, { status: 400 });
+
+  if (!isNonEmptyString(guildId) || !isNonEmptyString(botToken)) {
+    console.error('API Error: DISCORD_GUILD_ID or DISCORD_BOT_TOKEN resolved to an empty value.');
+    return NextResponse.json(
+      { error: 'Server is not configured to fetch channels. Required secrets are empty.' },
+      { status: 500 }
+    );
   }
 
   let allowedTypes: number[] = [];

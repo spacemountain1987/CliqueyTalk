@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 import { requireDiscordSession } from '@/lib/discord-session';
 import { getLatestSecretCached } from '@/lib/secrets';
+import { isValidSnowflake, isNonEmptyString } from '@/lib/discord-validators';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +19,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'User ID is required.' }, { status: 400 });
   }
 
+  if (!isValidSnowflake(userId)) {
+    return NextResponse.json({ error: 'Invalid User ID format. Expected a Discord snowflake ID.' }, { status: 400 });
+  }
+
   let guildId: string;
   let botToken: string;
   try {
@@ -28,6 +33,13 @@ export async function GET(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { error: 'Server is not configured to fetch member details.' },
+      { status: 500 }
+    );
+  }
+
+  if (!isNonEmptyString(guildId) || !isNonEmptyString(botToken)) {
+    return NextResponse.json(
+      { error: 'Server is not configured to fetch member details. Required secrets are empty.' },
       { status: 500 }
     );
   }

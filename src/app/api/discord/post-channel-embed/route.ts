@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/firebase/admin';
 import { requireFirebaseIdToken } from '@/lib/firebase-id-token';
 import { getLatestSecretCached } from '@/lib/secrets';
+import { isValidSnowflake } from '@/lib/discord-validators';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,10 @@ export async function POST(req: NextRequest) {
 
     if (!channelId) {
       return NextResponse.json({ error: 'Voice Channel ID is required' }, { status: 400 });
+    }
+
+    if (!isValidSnowflake(channelId)) {
+      return NextResponse.json({ error: 'Invalid Voice Channel ID format. Expected a Discord snowflake ID.' }, { status: 400 });
     }
 
     const [channelDoc, settingsDoc] = await Promise.all([
